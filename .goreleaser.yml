@@ -2,29 +2,57 @@ before:
   hooks:
     - go mod download
 env:
-- CGO_ENABLED=0
-- GOPROXY=https://proxy.golang.org
+  - CGO_ENABLED=0
+  - GOPROXY=https://proxy.golang.org
 project_name: athens
+
 builds:
-- id: builds
-  goos:
-    - linux
-    - darwin
-  goarch:
-    - amd64
-    - x86_64
-  main: cmd/proxy/main.go
-  binary: athens
-  ldflags:
-    - -X "github.com/gomods/athens/pkg/build.version={{ .Tag }}"
-    - -X "github.com/gomods/athens/pkg/build.buildDate={{ .Env.DATE }}"
+  - id: builds
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+
+    main: cmd/proxy/main.go
+    binary: athens
+    ldflags:
+      - -X "github.com/gomods/athens/pkg/build.version={{ .Tag }}"
+      - -X "github.com/gomods/athens/pkg/build.buildDate={{ .Env.DATE }}"
+
+dockers:
+  - image_templates:
+      - "{{ .Env.DOCKER_REPO }}:{{ .Version }}-amd64"
+    use: buildx
+    dockerfile: goreleaser.dockerfile
+    build_flag_templates:
+      - "--platform=linux/amd64"
+    extra_files:
+      - config.dev.toml
+  - image_templates:
+      - "{{ .Env.DOCKER_REPO }}:{{ .Version }}-arm64"
+    use: buildx
+    goarch: arm64
+    dockerfile: goreleaser.dockerfile
+    build_flag_templates:
+      - "--platform=linux/arm64"
+    extra_files:
+      - config.dev.toml
+
+docker_manifests:
+  - name_template: "{{ .Env.DOCKER_REPO }}:{{ .Version }}"
+    image_templates:
+      - "{{ .Env.DOCKER_REPO }}:{{ .Version }}-amd64"
+      - "{{ .Env.DOCKER_REPO }}:{{ .Version }}-arm64"
+
 checksum:
-  name_template: 'checksums.txt'
+  name_template: "checksums.txt"
 snapshot:
   name_template: "{{ .Tag }}-next"
 changelog:
   sort: asc
   filters:
     exclude:
-    - '^docs:'
-    - '^test:'
+      - "^docs:"
+      - "^test:"

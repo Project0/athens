@@ -7,22 +7,47 @@ jobs:
   goreleaser:
     runs-on: ubuntu-latest
     steps:
-      - name: checkout
-        uses: actions/checkout@v2
-      - name: unshallow
-        run: git fetch --prune --unshallow
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: set lower case names
+        run: |
+          echo "GITHUB_ACTOR_LC=${ACTOR,,}" >>${GITHUB_ENV}
+          echo "GITHUB_REPO_NAME_LC=${REPO,,}" >>${GITHUB_ENV}
+        env:
+          ACTOR: ${{ github.actor }}
+          REPO: ${{ github.repository }}
+
       - name: setup-go
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v3
         with:
           go-version: 1.18
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ env.GITHUB_ACTOR_LC }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+
       - name: capture current date
         id: date
         run: echo "::set-output name=date::$(date -u '+%Y-%m-%d-%H:%M:%S-%Z')"
       - name: goreleaser
-        uses: goreleaser/goreleaser-action@v2
+        uses: goreleaser/goreleaser-action@v3
         with:
           version: latest
           args: release --rm-dist
         env:
+          DOCKER_REPO: ghcr.io/${{ env.GITHUB_REPO_NAME_LC }}
           DATE: ${{ steps.date.outputs.date }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
