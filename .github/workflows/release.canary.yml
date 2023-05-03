@@ -2,7 +2,7 @@ name: Release canary and commit tags
 on:
   push:
     branches:
-      - main
+      - test-release
 jobs:
   docker-push-main:
     runs-on: ubuntu-latest
